@@ -18,10 +18,6 @@
     -fx-text-fill: #333;
 }
 
-.button.grid-button:pressed {
-    -fx-background-color: #ddd;
-}
-
 .button.grid-button.flagged {
     -fx-text-fill: #c00;
 }

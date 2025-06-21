@@ -9,11 +9,11 @@ import javafx.util.Duration;
  * A horizontal status bar showing remaining mines and elapsed time.
  * <p>
  * Call {@link #startTimer()} when the first cell is revealed,
- * {@link #stopTimer()} and {@link #revealAllMines()} on game end,
- * and {@link #reset(int)} when restarting.
+ * {@link #stopTimer()} on game end, and {@link #reset(int)} when restarting.
  * </p>
  */
 public class StatusBar extends HBox {
+    private static final String MINES_LABEL_PREFIX = "Mines: ";
     private final Label minesLabel = new Label();
     private final Label timeLabel  = new Label();
     private int minesRemaining;
@@ -28,7 +28,7 @@ public class StatusBar extends HBox {
         this.secondsElapsed = 0;
         setSpacing(20);
         setPadding(new Insets(5));
-        minesLabel.setText("Mines: " + minesRemaining);
+        minesLabel.setText(MINES_LABEL_PREFIX + minesRemaining);
         timeLabel.setText("Time: 0s");
         getChildren().addAll(minesLabel, timeLabel);
         initTimer();
@@ -65,7 +65,7 @@ public class StatusBar extends HBox {
         stopTimer();
         this.minesRemaining = totalMines;
         this.secondsElapsed = 0;
-        minesLabel.setText("Mines: " + minesRemaining);
+        minesLabel.setText(MINES_LABEL_PREFIX + minesRemaining);
         timeLabel.setText("Time: 0s");
     }
 
@@ -73,14 +73,14 @@ public class StatusBar extends HBox {
     public void decrementMines() {
         if (minesRemaining > 0) {
             minesRemaining--;
-            minesLabel.setText("Mines: " + minesRemaining);
+            minesLabel.setText(MINES_LABEL_PREFIX + minesRemaining);
         }
     }
 
     /** Increase the “mines remaining” count by one. */
     public void incrementMines() {
         minesRemaining++;
-        minesLabel.setText("Mines: " + minesRemaining);
+        minesLabel.setText(MINES_LABEL_PREFIX + minesRemaining);
     }
 
     /** @return how many seconds have elapsed since the timer started */
