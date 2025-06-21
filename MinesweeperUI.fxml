@@ -1,0 +1,35 @@
+<!-- File: MinesweeperUI.fxml -->
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.minesweeper.MinesweeperFXController"
+            stylesheets="@/styles.css">
+
+    <!-- Top status bar -->
+    <top>
+        <HBox fx:id="statusBar" spacing="20">
+            <padding>
+                <Insets top="5" right="5" bottom="5" left="5"/>
+            </padding>
+            <Label fx:id="minesLabel" text="Mines: 40" styleClass="mines-label"/>
+            <Label fx:id="timeLabel"  text="Time: 0s"   styleClass="time-label"/>
+        </HBox>
+    </top>
+
+    <!-- Main grid of cells -->
+    <center>
+        <GridPane fx:id="grid"
+                  hgap="1" vgap="1">
+            <padding>
+                <Insets top="5" right="5" bottom="5" left="5"/>
+            </padding>
+        </GridPane>
+    </center>
+
+</BorderPane>
