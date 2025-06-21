@@ -1,30 +1,40 @@
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 import java.util.Random;
 import java.util.Stack;
 
+/**
+ * A JavaFX implementation of Minesweeper.
+ * <p>
+ * Creates a ROWS×COLS grid with MINES mines placed at random.
+ * Left-click to reveal a cell, right-click to toggle a flag.
+ * Flood-fill reveals empty regions; dialogs notify win/lose.
+ * </p>
+ */
 public class MinesweeperFX extends Application {
 
-    // Board configuration
+    /** Number of rows in the board. */
     private static final int ROWS = 16;
+    /** Number of columns in the board. */
     private static final int COLS = 16;
+    /** Total number of mines to place. */
     private static final int MINES = 40;
-    private Cell[][] board = new Cell[ROWS][COLS];
-    private Button[][] buttons = new Button[ROWS][COLS];
-    private boolean gameOver = false;
-    private int cellsRevealed = 0;
+    /** Shared Random instance for mine placement. */
+    private static final Random RANDOM = new Random();
+
+    private Cell[][] board;
+    private Button[][] buttons;
+    private boolean gameOver;
+    private int cellsRevealed;
 
     public static void main(String[] args) {
         launch(args);
@@ -32,136 +42,167 @@ public class MinesweeperFX extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        initBoard();
-        GridPane grid = new GridPane();
-        grid.setPadding(new Insets(5));
-        grid.setHgap(1);
-        grid.setVgap(1);
-
-        for (int r = 0; r < ROWS; r++) {
-            for (int c = 0; c < COLS; c++) {
-                Button btn = new Button();
-                btn.setPrefSize(35, 35);
-                btn.setFont(Font.font("Arial", 14));
-                final int row = r;
-                final int col = c;
-                btn.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                    @Override
-                    public void handle(MouseEvent event) {
-                        if (gameOver) return;
-                        if (event.getButton() == MouseButton.SECONDARY) {
-                            toggleFlag(row, col);
-                        } else if (event.getButton() == MouseButton.PRIMARY) {
-                            revealCell(row, col);
-                        }
-                    }
-                });
-                buttons[r][c] = btn;
-                grid.add(btn, c, r);
-            }
-        }
-
-        Scene scene = new Scene(grid);
+        initModel();
+        GridPane grid = createGridPane();
         primaryStage.setTitle("MinesweeperFX");
-        primaryStage.setScene(scene);
+        primaryStage.setScene(new Scene(grid));
         primaryStage.show();
     }
 
-    private void initBoard() {
-        // Initialize cells
+    /** Initialize game model: cells, mines, and adjacent counts. */
+    private void initModel() {
+        board = new Cell[ROWS][COLS];
+        buttons = new Button[ROWS][COLS];
+        createEmptyCells();
+        placeMines();
+        computeAdjacencies();
+    }
+
+    /** Create blank cells for the grid. */
+    private void createEmptyCells() {
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLS; c++) {
                 board[r][c] = new Cell();
             }
         }
-        // Place mines randomly
-        int minesPlaced = 0;
-        Random rand = new Random();
-        while (minesPlaced < MINES) {
-            int r = rand.nextInt(ROWS);
-            int c = rand.nextInt(COLS);
-            if (!board[r][c].isMine) {
-                board[r][c].isMine = true;
-                minesPlaced++;
-            }
-        }
-        // Set adjacent mine counts
-        for (int r = 0; r < ROWS; r++) {
-            for (int c = 0; c < COLS; c++) {
-                board[r][c].adjacentMines = countAdjacentMines(r, c);
+    }
+
+    /** Randomly place MINES mines on the board. */
+    private void placeMines() {
+        int placed = 0;
+        while (placed < MINES) {
+            int r = RANDOM.nextInt(ROWS), c = RANDOM.nextInt(COLS);
+            if (!board[r][c].isMine()) {
+                board[r][c].setMine(true);
+                placed++;
             }
         }
     }
 
-    private int countAdjacentMines(int row, int col) {
+    /** Compute adjacent-mine count for each cell. */
+    private void computeAdjacencies() {
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLS; c++) {
+                board[r][c].setAdjacentMines(countAdjacent(r, c));
+            }
+        }
+    }
+
+    /**
+     * Count how many mines are adjacent to (row, col).
+     *
+     * @return number of adjacent mines
+     */
+    private int countAdjacent(int row, int col) {
         int count = 0;
-        for (int r = row - 1; r <= row + 1; r++) {
-            for (int c = col - 1; c <= col + 1; c++) {
-                if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
-                    if (board[r][c].isMine) {
-                        count++;
-                    }
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                int rr = row + dr, cc = col + dc;
+                if (rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS && board[rr][cc].isMine()) {
+                    count++;
                 }
             }
         }
         return count;
     }
 
-    private void toggleFlag(int row, int col) {
-        if (board[row][col].isRevealed) return;
-        board[row][col].isFlagged = !board[row][col].isFlagged;
-        buttons[row][col].setText(board[row][col].isFlagged ? "F" : "");
+    /** Build and return the GridPane of buttons. */
+    private GridPane createGridPane() {
+        GridPane grid = new GridPane();
+        grid.setPadding(new Insets(5));
+        grid.setHgap(1);
+        grid.setVgap(1);
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLS; c++) {
+                Button btn = createCellButton(r, c);
+                buttons[r][c] = btn;
+                grid.add(btn, c, r);
+            }
+        }
+        return grid;
     }
 
-    private void revealCell(int row, int col) {
-        if (board[row][col].isFlagged || board[row][col].isRevealed) return;
+    /**
+     * Create a Button for one cell, with mouse handler for clicks.
+     */
+    private Button createCellButton(int row, int col) {
+        Button btn = new Button();
+        btn.setPrefSize(35, 35);
+        btn.setFont(Font.font("Arial", 14));
+        btn.setOnMouseClicked(e -> {
+            if (gameOver) return;
+            if (e.getButton() == MouseButton.SECONDARY) {
+                toggleFlag(row, col);
+            } else if (e.getButton() == MouseButton.PRIMARY) {
+                revealCell(row, col);
+            }
+        });
+        return btn;
+    }
 
-        board[row][col].isRevealed = true;
+    /**
+     * Toggle a flag on the specified cell.
+     */
+    private void toggleFlag(int row, int col) {
+        Cell cell = board[row][col];
+        if (cell.isRevealed()) return;
+        cell.setFlagged(!cell.isFlagged());
+        buttons[row][col].setText(cell.isFlagged() ? "F" : "");
+    }
+
+    /**
+     * Reveal a cell: show mine, number, or flood-fill.
+     */
+    private void revealCell(int row, int col) {
+        Cell cell = board[row][col];
+        if (cell.isRevealed() || cell.isFlagged()) return;
+
+        cell.setRevealed(true);
         buttons[row][col].setDisable(true);
         cellsRevealed++;
 
-        if (board[row][col].isMine) {
-            buttons[row][col].setText("M");
-            buttons[row][col].setStyle("-fx-background-color: red;");
-            gameOver();
-            return;
-        }
-
-        if (board[row][col].adjacentMines > 0) {
-            buttons[row][col].setText(String.valueOf(board[row][col].adjacentMines));
+        if (cell.isMine()) {
+            showMine(row, col);
+            endGame(false);
+        } else if (cell.getAdjacentMines() > 0) {
+            buttons[row][col].setText(String.valueOf(cell.getAdjacentMines()));
+            checkWin();
         } else {
-            buttons[row][col].setText("");
-            floodFill(row, col);
-        }
-
-        // Check win condition
-        if (cellsRevealed == ROWS * COLS - MINES) {
-            winGame();
+            floodFillZeros(row, col);
+            checkWin();
         }
     }
 
-    private void floodFill(int row, int col) {
+    /** Reveal a mine with red background. */
+    private void showMine(int row, int col) {
+        Button btn = buttons[row][col];
+        btn.setText("M");
+        btn.setStyle("-fx-background-color: red;");
+    }
+
+    /**
+     * Flood-fill reveal of all connected zero-adjacent cells.
+     */
+    private void floodFillZeros(int row, int col) {
         Stack<int[]> stack = new Stack<>();
         stack.push(new int[]{row, col});
-
         while (!stack.isEmpty()) {
-            int[] pos = stack.pop();
-            int r = pos[0], c = pos[1];
-
-            for (int i = r - 1; i <= r + 1; i++) {
-                for (int j = c - 1; j <= c + 1; j++) {
-                    if (i >= 0 && i < ROWS && j >= 0 && j < COLS) {
-                        if (!board[i][j].isRevealed && !board[i][j].isFlagged) {
-                            board[i][j].isRevealed = true;
-                            buttons[i][j].setDisable(true);
-                            cellsRevealed++;
-                            if (board[i][j].isMine) continue;
-                            if (board[i][j].adjacentMines > 0) {
-                                buttons[i][j].setText(String.valueOf(board[i][j].adjacentMines));
-                            } else {
-                                buttons[i][j].setText("");
-                                stack.push(new int[]{i, j});
-                            }
+            int[] p = stack.pop();
+            for (int dr = -1; dr <= 1; dr++) {
+                for (int dc = -1; dc <= 1; dc++) {
+                    int r = p[0] + dr, c = p[1] + dc;
+                    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
+                    Cell nbr = board[r][c];
+                    if (!nbr.isRevealed() && !nbr.isFlagged()) {
+                        nbr.setRevealed(true);
+                        buttons[r][c].setDisable(true);
+                        cellsRevealed++;
+                        if (nbr.isMine()) continue;
+                        if (nbr.getAdjacentMines() > 0) {
+                            buttons[r][c].setText(String.valueOf(nbr.getAdjacentMines()));
+                        } else {
+                            buttons[r][c].setText("");
+                            stack.push(new int[]{r, c});
                         }
                     }
                 }
@@ -169,21 +210,32 @@ public class MinesweeperFX extends Application {
         }
     }
 
-    private void gameOver() {
+    /** Check for win condition and end game if met. */
+    private void checkWin() {
+        if (cellsRevealed == ROWS * COLS - MINES) {
+            endGame(true);
+        }
+    }
+
+    /**
+     * End the game: reveal all mines and show alert.
+     *
+     * @param won true if player cleared all non-mines
+     */
+    private void endGame(boolean won) {
         gameOver = true;
         revealAllMines();
-        showAlert("Game Over", "You hit a mine! Game Over.", Alert.AlertType.ERROR);
+        String title = won ? "You Win" : "Game Over";
+        String msg   = won ? "Congratulations! You've cleared the board!" : "You hit a mine! Game Over.";
+        Alert.AlertType type = won ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR;
+        showAlert(title, msg, type);
     }
 
-    private void winGame() {
-        gameOver = true;
-        showAlert("Congratulations!", "You've cleared the board! You win!", Alert.AlertType.INFORMATION);
-    }
-
+    /** Reveal every mine on the board. */
     private void revealAllMines() {
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLS; c++) {
-                if (board[r][c].isMine) {
+                if (board[r][c].isMine()) {
                     buttons[r][c].setText("M");
                     buttons[r][c].setDisable(true);
                 }
@@ -191,6 +243,9 @@ public class MinesweeperFX extends Application {
         }
     }
 
+    /**
+     * Show a JavaFX alert on the UI thread.
+     */
     private void showAlert(String title, String message, Alert.AlertType type) {
         Platform.runLater(() -> {
             Alert alert = new Alert(type);
@@ -201,11 +256,22 @@ public class MinesweeperFX extends Application {
         });
     }
 
-    // Cell model representing each board cell
+    /**
+     * Model for each cell in the Minesweeper grid.
+     */
     private static class Cell {
-        boolean isMine = false;
-        boolean isRevealed = false;
-        boolean isFlagged = false;
-        int adjacentMines = 0;
+        private boolean mine;
+        private boolean revealed;
+        private boolean flagged;
+        private int adjacentMines;
+
+        boolean isMine()             { return mine; }
+        void    setMine(boolean m)   { mine = m; }
+        boolean isRevealed()         { return revealed; }
+        void    setRevealed(boolean r){ revealed = r; }
+        boolean isFlagged()          { return flagged; }
+        void    setFlagged(boolean f){ flagged = f; }
+        int     getAdjacentMines()   { return adjacentMines; }
+        void    setAdjacentMines(int a){ adjacentMines = a; }
     }
 }
