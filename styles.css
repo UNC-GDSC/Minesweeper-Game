@@ -1,0 +1,53 @@
+/* File: styles.css */
+
+/* Root pane */
+.root {
+    -fx-font-family: "Arial";
+    -fx-background-color: linear-gradient(to bottom right, #ece9e6, #ffffff);
+}
+
+/* Grid buttons */
+.button.grid-button {
+    -fx-pref-width: 35px;
+    -fx-pref-height: 35px;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-border-color: #bbb;
+    -fx-border-width: 1;
+    -fx-font-size: 14px;
+    -fx-text-fill: #333;
+}
+
+.button.grid-button:pressed {
+    -fx-background-color: #ddd;
+}
+
+.button.grid-button.flagged {
+    -fx-text-fill: #c00;
+}
+
+.button.grid-button.mine {
+    -fx-text-fill: white;
+    -fx-background-color: red;
+}
+
+/* Status bar */
+.hbox.status-bar {
+    -fx-background-color: #f7f7f7;
+    -fx-border-color: #ccc;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 8 12;
+}
+
+.status-bar .label {
+    -fx-font-size: 16px;
+    -fx-text-fill: #555;
+}
+
+.status-bar .mines-label {
+    -fx-text-fill: #a00;
+}
+
+.status-bar .time-label {
+    -fx-text-fill: #005;
+}
